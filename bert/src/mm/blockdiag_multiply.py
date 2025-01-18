@@ -48,7 +48,9 @@ class BlockdiagMultiply(torch.autograd.Function):
     @staticmethod
     @torch.cuda.amp.custom_fwd()
     def forward(ctx, x, weight):
+        weight = weight.to(x.dtype)
         ctx.save_for_backward(x, weight)
+        
         batch_shape, n = x.shape[:-1], x.shape[-1]
         seq_dim = np.prod(batch_shape)
         nblocks, blk_out, blk_in = weight.shape
@@ -59,6 +61,7 @@ class BlockdiagMultiply(torch.autograd.Function):
         out = torch.bmm(x_reshaped, weight.transpose(-1, -2), out=out).transpose(
             0, 1
         )  # (nblocks, seq_dim, blk_sz) @ (nblocks, blk_sz, blk_r) -> (nblocks, seq_dim, blk1_out)
+        
         return out.reshape(*batch_shape, nblocks * blk_out)
 
     @staticmethod
